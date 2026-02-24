@@ -9,6 +9,7 @@ dependencies = [
     "fastapi[all,standart]>=0.129.0",
     "passlib>=1.7.4",
     "psycopg2-binary>=2.9.11",
+    "pydantic-settings>=2.13.1",
     "ruff>=0.15.2",
     "sqlalchemy>=2.0.46",
 ]
