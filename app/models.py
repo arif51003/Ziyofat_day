@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import BigInteger, Integer, String, Boolean, ForeignKey, Numeric, DateTime, JSON
+from sqlalchemy import BigInteger, Integer, String, Boolean, ForeignKey, Numeric, DateTime, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 
 
@@ -16,7 +16,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String)
     password_hash: Mapped[str] = mapped_column(String)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
     orders = relationship("Order", back_populates="waiter")
 

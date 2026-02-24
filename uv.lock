@@ -1249,6 +1249,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "ruff" },
     { name = "sqlalchemy" },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
@@ -1260,4 +1261,5 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.13.1" },
     { name = "ruff", specifier = ">=0.15.2" },
     { name = "sqlalchemy", specifier = ">=2.0.46" },
+    { name = "uvicorn", specifier = ">=0.41.0" },
 ]
