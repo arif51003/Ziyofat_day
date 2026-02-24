@@ -20,10 +20,13 @@ class User(BaseModel):
     __tablename__ = "users"
 
     username: Mapped[str] = mapped_column(String, unique=True)
-    full_name: Mapped[str] = mapped_column(String)
+    first_name: Mapped[str] = mapped_column(String)
+    last_name: Mapped[str] = mapped_column(String)
     role: Mapped[str] = mapped_column(String)
     password_hash: Mapped[str] = mapped_column(String)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default = True )
+    is_admin: Mapped[bool] = mapped_column(Boolean, default = False)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default = False)
 
     orders = relationship("Order", back_populates="waiter")
 

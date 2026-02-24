@@ -970,6 +970,20 @@ wheels = [
 ]
 
 [[package]]
+name = "starlette-admin"
+version = "0.16.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jinja2" },
+    { name = "python-multipart" },
+    { name = "starlette" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/56/5e/2487c92a3239d01cf1cb7db5d8455454b231c49a7576c06f3241050e8813/starlette_admin-0.16.0.tar.gz", hash = "sha256:e706a1582a22a69202d3165d8c626d5868822c229353a81e1d189666d8418f64", size = 2104304, upload-time = "2025-12-13T21:49:40.087Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/66/85/f3950e95771e92079ad2c6f8d52ce4c04a0e2e47cedc989ae465d9cfbd9c/starlette_admin-0.16.0-py3-none-any.whl", hash = "sha256:9b7ee51cc275684ba75dda5eafc650e0c8afa1d2b7e99e4d1c83fe7d1e83de9e", size = 2175927, upload-time = "2025-12-13T21:49:42.272Z" },
+]
+
+[[package]]
 name = "typer"
 version = "0.24.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1249,6 +1263,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "ruff" },
     { name = "sqlalchemy" },
+    { name = "starlette-admin" },
     { name = "uvicorn" },
 ]
 
@@ -1261,5 +1276,6 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.13.1" },
     { name = "ruff", specifier = ">=0.15.2" },
     { name = "sqlalchemy", specifier = ">=2.0.46" },
+    { name = "starlette-admin", specifier = ">=0.16.0" },
     { name = "uvicorn", specifier = ">=0.41.0" },
 ]
