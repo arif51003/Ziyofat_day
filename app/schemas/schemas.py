@@ -13,6 +13,3 @@ class TableCreate(TableBase):
 
 class TableRead(TableBase):
     id: int
-
-    class Config:
-        orm_mode = True

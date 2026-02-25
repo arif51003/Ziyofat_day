@@ -1,4 +1,5 @@
 from datetime import datetime
+from fastapi import Request
 from sqlalchemy import (
     BigInteger,
     Integer,
@@ -63,7 +64,7 @@ class MenuCategory(BaseModel):
 
     items = relationship("MenuItem", back_populates="category")
     
-    def __repr__(self):
+    def __admin_repr__(self, request: Request):
         return self.name
 
 
