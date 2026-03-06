@@ -282,3 +282,15 @@ class MenuVariantView(ModelView):
 
 class AuditLogView(ModelView):
     pass
+
+class IngredientsView(ModelView):
+    pass
+
+class MenuIngredientsView(ModelView):
+    pass
+
+class IngredientStockView(ModelView):
+    pass
+
+class StockMovementsView(ModelView):
+    pass

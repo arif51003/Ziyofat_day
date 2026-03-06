@@ -11,6 +11,10 @@ from app.models import (
     OrderItem,
     AuditLog,
     MenuItemVariant,
+    Ingredient,
+    MenuIngredient,
+    IngredientStock,
+    StockMovements
 )
 from .views import (
     UserAdminView,
@@ -22,6 +26,10 @@ from .views import (
     OrderItemView,
     MenuVariantView,
     AuditLogView,
+    IngredientsView,
+    MenuIngredientsView,
+    IngredientStockView,
+    StockMovementsView
 )
 from app.admin.auth import JSONAuthProvider
 
@@ -41,3 +49,7 @@ admin.add_view(OrdersView(Order, icon="fa fa-shopping-basket"))
 admin.add_view(OrderItemView(OrderItem, icon="fa fa-coffee"))
 admin.add_view(MenuVariantView(MenuItemVariant, icon="fa fa-tasks"))
 admin.add_view(AuditLogView(AuditLog, icon="fa fa-camera"))
+admin.add_view(MenuIngredientsView(MenuIngredient))
+admin.add_view(IngredientsView(Ingredient))
+admin.add_view(IngredientStockView(IngredientStock))
+admin.add_view(StockMovementsView(StockMovements))

@@ -73,7 +73,7 @@ class MenuItemRead(BaseModel):
     station: str
     is_active: bool
     category_id: int | None
-    img_id: int | None  # rasm ID — frontend /static/uploads/ orqali oladi
+    img_id: int | None 
     variants: list[MenuItemVariantRead] = []
 
     model_config = {"from_attributes": True}
