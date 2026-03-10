@@ -59,7 +59,6 @@ jwt_security = HTTPBearer(auto_error=False)
 @router.post("/logout", status_code=200)
 async def logout(
     session: db_dep,
-    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(jwt_security),
 ):
     if not credentials:

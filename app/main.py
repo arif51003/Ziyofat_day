@@ -2,11 +2,12 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.routers import (
-    table_router,
     login_router,
-    menu_router,
-    order_router,
+    waiter_router,
     user_router,
+    cashier_router,
+    kitchen_router
+    
 )
 
 # from app.middleware.dbmiddleware import DBSessionMiddleware
@@ -17,13 +18,13 @@ app = FastAPI(title="ZIYOFAT-DAY")
 
 app.include_router(login_router)
 app.include_router(user_router)
-app.include_router(table_router)
-app.include_router(menu_router)
-app.include_router(order_router)
+app.include_router(cashier_router)
+app.include_router(waiter_router)
+app.include_router(kitchen_router)
 
-# app.add_middleware(DBSessionMiddleware)
+
 
 admin.mount_to(app=app)
 
 
-app.mount("/static/uploads", StaticFiles(directory="media_uploads"), name="uploads")
+app.mount("/static", StaticFiles(directory="media_uploads"), name="uploads")

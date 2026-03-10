@@ -18,8 +18,6 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
 
-class UserUploadRequest(BaseModel):
-    pass
 
 
 from pydantic import BaseModel

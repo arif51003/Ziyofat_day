@@ -21,7 +21,6 @@ class JSONAuthProvider(AuthProvider):
         username: str,
         password: str,
         remember_me: bool,
-        request: Request,
         response: Response,
     ):
         db = next(get_db())
@@ -85,6 +84,6 @@ class JSONAuthProvider(AuthProvider):
         except jwt.JWTError:
             return None
 
-    async def logout(self, request: Request, response: Response) -> Response:
+    async def logout(self, response: Response) -> Response:
         response.delete_cookie("access_token")
         return response

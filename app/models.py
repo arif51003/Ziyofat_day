@@ -6,7 +6,6 @@ from sqlalchemy import (
     String,
     Boolean,
     ForeignKey,
-    Numeric,
     DateTime,
     Float,
     JSON,
@@ -46,7 +45,18 @@ class User(BaseModel):
 
     orders: Mapped[list["Order"]] = relationship("Order", back_populates="waiter")
     avatar: Mapped["Media"] = relationship("Media", foreign_keys=[avatar_id])
-    stock_movements:Mapped["StockMovements"]=relationship("StockMovements",back_populates="user")
+    stock_movements: Mapped[list["StockMovements"]] = relationship(
+    "StockMovements",
+    back_populates="user"
+    
+
+)
+    def __admin_repr__(self,request:Request):
+        return self.username
+    
+    def __repr__(self):
+        return self.username
+    
 
 class DiningTable(BaseModel):
     __tablename__ = "dining_table"
@@ -56,6 +66,12 @@ class DiningTable(BaseModel):
     status: Mapped[str] = mapped_column(String(10), nullable=True, default="free")
 
     orders = relationship("Order", back_populates="table")
+    
+    def __repr__(self):
+        return self.table_no
+    
+    def __admin_repr__(self,request:Request):
+        return self.table_no
 
 
 class MenuCategory(BaseModel):
@@ -89,6 +105,13 @@ class MenuItem(BaseModel):
     variants = relationship("MenuItemVariant", back_populates="menu_item")
     img: Mapped["Media"] = relationship("Media", foreign_keys=[img_id])
     ingredients:Mapped[list["MenuIngredient"]] = relationship("MenuIngredient",back_populates="menu_item")
+    order_item=relationship("OrderItem",back_populates="menu_item")
+    
+    def __admin_repr__(self,request:Request):
+        return self.name
+    
+    def __repr__(self):
+        return self.name
 
 class MenuItemVariant(BaseModel):
     __tablename__ = "menu_item_variant"
@@ -99,8 +122,13 @@ class MenuItemVariant(BaseModel):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     menu_item = relationship("MenuItem", back_populates="variants")
+    order_item= relationship("OrderItem",back_populates="variant")
 
-
+    def __admin_repr__(self,request:Request):
+        return self.name
+    def __repr__(self):
+        return self.name
+    
 class Order(BaseModel):
     __tablename__ = "orders"
 
@@ -117,6 +145,11 @@ class Order(BaseModel):
     items = relationship("OrderItem", back_populates="order")
     payments = relationship("Payment", back_populates="order")
 
+    def __admin_repr__(self,request:Request):
+        return self.id
+    
+    def __repr__(self):
+        return f"{self.id} {self.table_id}"
 
 class OrderItem(BaseModel):
     __tablename__ = "order_item"
@@ -136,7 +169,8 @@ class OrderItem(BaseModel):
     served_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     order = relationship("Order", back_populates="items")
-
+    menu_item=relationship("MenuItem",back_populates="order_item")
+    variant=relationship("MenuItemVariant",back_populates="order_item")
 
 
 
@@ -189,7 +223,8 @@ class Ingredient(BaseModel):
     )
 
     stock: Mapped["IngredientStock"] = relationship(
-        back_populates="ingredient"
+        back_populates="ingredient",
+        uselist=False
     )
 
     stock_movements: Mapped[list["StockMovements"]] = relationship(
