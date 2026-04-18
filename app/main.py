@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from app.routers import waiter_search
+
 
 from app.routers import (
     login_router,
@@ -21,6 +23,7 @@ app.include_router(user_router)
 app.include_router(cashier_router)
 app.include_router(waiter_router)
 app.include_router(kitchen_router)
+app.include_router(waiter_search.router)
 
 
 
