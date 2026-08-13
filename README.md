@@ -18,6 +18,7 @@ Admin panel: **Starlette-Admin** (`/admin`)
 - [Loyihani ishga tushirish](#loyihani-ishga-tushirish)
 - [Muhit o'zgaruvchilari (.env)](#muhit-ozgaruvchilari-env)
 - [Ma'lumotlar bazasi va migratsiyalar](#malumotlar-bazasi-va-migratsiyalar)
+- [Demo ma'lumotlar bilan to'ldirish (seed)](#demo-malumotlar-bilan-toldirish-seed)
 - [Birinchi admin yaratish](#birinchi-admin-yaratish)
 - [API endpointlar](#api-endpointlar)
 - [Buyurtma workflow](#buyurtma-workflow)
@@ -171,9 +172,32 @@ uv run alembic downgrade -1
 
 Asosiy jadvallar: `users`, `dining_table`, `menu_category`, `menu_item`, `menu_item_variant`, `orders`, `order_item`, `payment`, `audit_log`, `ingredients`, `menu_ingredient`, `ingredient_stock`, `stock_movements`, `media`.
 
+## Demo ma'lumotlar bilan to'ldirish (seed)
+
+Tizimni bo'sh bazada sinab ko'rish uchun `scripts/seed_data.py` skripti barcha jadvallarga real restoranga mos, bir-biriga to'liq bog'langan namuna ma'lumotlarni joylaydi:
+
+```bash
+uv run python scripts/seed_data.py --yes
+```
+
+> **DIQQAT:** bu skript ishga tushirilgan jadvallardagi (`users`, `orders`, `menu_item` va h.k.) **barcha mavjud ma'lumotlarni o'chirib**, o'rniga demo ma'lumotlarni yozadi (`TRUNCATE ... CASCADE`). Production bazada hech qachon ishlatmang. `--yes` bermasangiz, skript tasdiqlashni so'raydi.
+
+Yaratiladigan demo ma'lumotlar:
+
+| Model | Miqdor | Izoh |
+|---|---|---|
+| Foydalanuvchilar | 8 ta | 1 admin, 3 waiter, 2 kitchen, 2 cashier. Parol: `<username>123` (masalan `admin` / `admin123`) |
+| Stollar | 10 ta | turli sig'imda, 2 tasi band, 1 tasi rezerv holatida |
+| Menyu kategoriyalari | 6 ta | Salatlar, Sho'rvalar, Issiq taomlar, Fast-food, Ichimliklar, Shirinliklar |
+| Menyu bandlari | 24 ta | har biri narx, stansiya va **to'liq retsept** bilan |
+| Ingredientlar + ombor | 18 ta | har biriga boshlang'ich ombor qoldig'i (`ingredient_stock`) bilan |
+| Variantlar | 6 ta | ba'zi taomlar uchun (katta porsiya, qo'shimcha shish va h.k.) |
+| Namuna buyurtmalar | 3 ta | 1 yopilgan/to'langan, 1 oshxonada tayyorlanayotgan, 1 hali ochiq |
+| Audit log | 3 ta | namuna yozuvlar |
+
 ## Birinchi admin yaratish
 
-`/auth/user-create` endpointi faqat mavjud admin tokeni bilan ishlaydi, shuning uchun **birinchi admin** to'g'ridan-to'g'ri Python orqali yaratiladi:
+Seed skripti ishlatilganda `admin` foydalanuvchisi avtomatik yaratiladi. Agar seed skriptisiz, bo'sh bazada faqat admin kerak bo'lsa, quyidagicha to'g'ridan-to'g'ri Python orqali yaratish mumkin (`/auth/user-create` endpointi faqat mavjud admin tokeni bilan ishlaydi):
 
 ```bash
 uv run python -c "
