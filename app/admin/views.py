@@ -240,7 +240,7 @@ class TableViews(ModelView):
             choices=[
                 ("free", "Free"),
                 ("occupied", "Occupied"),
-                ("reversed", "Reversed"),
+                ("reserved", "Reserved"),
             ],
         ),
         "created_at",

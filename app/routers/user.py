@@ -1,6 +1,6 @@
 import os
 import uuid
-from fastapi import APIRouter, Request, UploadFile, Form, File
+from fastapi import APIRouter, UploadFile, Form, File
 
 from app.database import db_dep
 from app.models import Media
@@ -18,9 +18,18 @@ def _safe_ext(filename: str) -> str:
 UPLOAD_DIR = "media_uploads"
 
 
+def _to_profile_response(user) -> UserProfileResponse:
+    return UserProfileResponse(
+        username=user.username,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        avatar_url=user.avatar.url if user.avatar else None,
+    )
+
+
 @router.get("/profile/", response_model=UserProfileResponse)
 async def me(current_user: current_user):
-    return current_user
+    return _to_profile_response(current_user)
 
 
 @router.patch("/profile/update", response_model=UserProfileResponse)
@@ -55,4 +64,4 @@ async def update_me(
     session.commit()
     session.refresh(current_user)
 
-    return current_user
+    return _to_profile_response(current_user)

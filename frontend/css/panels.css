@@ -1,0 +1,154 @@
+/* Panel Layouts */
+
+/* Waiter View: Tables Grid */
+.tables-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 24px;
+    padding: 24px 0;
+}
+
+.table-card {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.table-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+.table-card.free {
+    border-left: 4px solid var(--c-success);
+}
+
+.table-card.occupied {
+    border-left: 4px solid var(--c-danger);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.table-no {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.table-cap {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+/* Kitchen Kanban */
+.kanban-board {
+    display: flex;
+    gap: 24px;
+    height: calc(100vh - 180px);
+    overflow-x: auto;
+}
+
+.kanban-col {
+    flex: 1;
+    min-width: 320px;
+    background: var(--c-surface);
+    border-radius: var(--border-radius);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.kanban-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--c-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.kanban-badge {
+    background: var(--c-primary-alpha);
+    color: var(--c-primary);
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 0.75rem;
+}
+
+.kanban-items {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.order-card {
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    border-radius: var(--border-radius-sm);
+    padding: 16px;
+}
+
+.order-card-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.order-item-list {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.order-item-list li {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+/* Cashier List */
+.cashier-list {
+    background: var(--c-surface);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--c-border);
+    overflow: hidden;
+}
+
+.cashier-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 150px 150px 150px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--c-border);
+    align-items: center;
+}
+
+.cashier-row.header {
+    background: rgba(255,255,255,0.02);
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.cashier-row:not(.header):hover {
+    background: rgba(255,255,255,0.02);
+}
+
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-unpaid { background: var(--c-warning); color: #000; }
+.status-paid { background: var(--c-success-alpha); color: var(--c-success); }

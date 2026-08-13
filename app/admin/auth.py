@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from fastapi import Request, Response
+from fastapi import HTTPException, Request, Response
 from jose import jwt
 from starlette_admin.auth import AuthProvider
 from starlette_admin.exceptions import LoginFailed
@@ -21,19 +21,26 @@ class JSONAuthProvider(AuthProvider):
         username: str,
         password: str,
         remember_me: bool,
+        request: Request,
         response: Response,
     ):
         db = next(get_db())
-        user = db.query(User).filter(User.username == username).first()
+        try:
+            user = db.query(User).filter(User.username == username).first()
 
-        if not user or user.is_deleted:
-            raise LoginFailed("User not found.")
+            if not user or user.is_deleted:
+                raise LoginFailed("User not found.")
 
-        if user and not user.is_admin:
-            raise LoginFailed("User is not admin.")
+            if not user.is_admin:
+                raise LoginFailed("User is not admin.")
 
-        if not verify_password(password, user.password_hash):
-            raise LoginFailed("Invalid password.")
+            if not user.is_active:
+                raise LoginFailed("User is not active.")
+
+            if not verify_password(password, user.password_hash):
+                raise LoginFailed("Invalid password.")
+        finally:
+            db.close()
 
         access_token, refresh_token = generate_jwt_tokens(user.id)
 
@@ -64,26 +71,27 @@ class JSONAuthProvider(AuthProvider):
 
         try:
             payload = decode_jwt_token(token)
-            user_id: str = payload.get("sub")
-            if user_id is None:
-                return None
-
-            db = next(get_db())
-            user = db.query(User).filter(User.id == user_id).first()
-
-            if user is None or user.is_deleted or not user.is_admin:
-                return None
-
-            if payload.get("exp") < datetime.now(UTC).timestamp():
-                return None
-
-            db.close()
-
-            return user
-
-        except jwt.JWTError:
+        except (jwt.JWTError, HTTPException):
             return None
 
-    async def logout(self, response: Response) -> Response:
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+
+        if payload.get("exp") < datetime.now(UTC).timestamp():
+            return None
+
+        db = next(get_db())
+        try:
+            user = db.query(User).filter(User.id == user_id).first()
+
+            if user is None or user.is_deleted or not user.is_admin or not user.is_active:
+                return None
+
+            return user
+        finally:
+            db.close()
+
+    async def logout(self, request: Request, response: Response) -> Response:
         response.delete_cookie("access_token")
         return response

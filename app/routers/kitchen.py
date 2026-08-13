@@ -1,11 +1,11 @@
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.dependencies import current_user, db_dep
-from app.models import Order, OrderItem
+from app.dependencies import kitchen_user, db_dep
+from app.models import Order, OrderItem, MenuItem
 from app.schemas.kitchen import (
     KitchenOrderItemResponse,
     KitchenOrderResponse,
@@ -15,19 +15,16 @@ from app.schemas.kitchen import (
 router = APIRouter(prefix="/kitchen", tags=["Kitchen"])
 
 @router.get("/order-items/queue", response_model=list[KitchenOrderItemResponse])
-def get_kitchen_queue(user: current_user, db: db_dep):
-    if user.role != "kitchen":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Faqat kitchen uchun",
-        )
+def get_kitchen_queue(user: kitchen_user, db: db_dep):
 
     stmt = (
         select(OrderItem)
         .join(Order, Order.id == OrderItem.order_id)
+        .join(MenuItem, MenuItem.id == OrderItem.menu_item_id)
         .where(
             Order.status == "submitted",
-            OrderItem.status.in_(["sent", "preparing"]),
+            OrderItem.status.in_(["sent", "preparing", "ready"]),
+            MenuItem.station.notin_(["Ichimliklar", "Shirinliklar"]),
         )
         .options(
             selectinload(OrderItem.order).selectinload(Order.table),
@@ -60,12 +57,7 @@ def get_kitchen_queue(user: current_user, db: db_dep):
     
     
 @router.get("/orders/{order_id}", response_model=KitchenOrderResponse)
-def get_kitchen_order(order_id: int, user: current_user, db: db_dep):
-    if user.role != "kitchen":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Faqat kitchen uchun",
-        )
+def get_kitchen_order(order_id: int, user: kitchen_user, db: db_dep):
 
     stmt = (
         select(Order)
@@ -105,6 +97,7 @@ def get_kitchen_order(order_id: int, user: current_user, db: db_dep):
             served_at=item.served_at,
         )
         for item in order.items
+        if item.menu_item and item.menu_item.station not in ["Ichimliklar", "Shirinliklar"]
     ]
 
     return KitchenOrderResponse(
@@ -120,12 +113,7 @@ def get_kitchen_order(order_id: int, user: current_user, db: db_dep):
     )
     
 @router.post("/order-items/{item_id}/start", response_model=KitchenActionResponse)
-def start_preparing(item_id: int, user: current_user, db: db_dep):
-    if user.role != "kitchen":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Faqat kitchen uchun",
-        )
+def start_preparing(item_id: int, user: kitchen_user, db: db_dep):
 
     stmt = (
         select(OrderItem)
@@ -162,12 +150,7 @@ def start_preparing(item_id: int, user: current_user, db: db_dep):
     
     
 @router.post("/order-items/{item_id}/ready", response_model=KitchenActionResponse)
-def mark_item_ready(item_id: int, user: current_user, db: db_dep):
-    if user.role != "kitchen":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Faqat kitchen uchun",
-        )
+def mark_item_ready(item_id: int, user: kitchen_user, db: db_dep):
 
     stmt = (
         select(OrderItem)

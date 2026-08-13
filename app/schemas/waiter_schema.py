@@ -132,6 +132,12 @@ class DeleteOrderItemResponse(BaseModel):
     message: str
 
 
+class ServeOrderItemResponse(BaseModel):
+    id: int
+    status: str
+    served_at: datetime | None = None
+
+
 class DeductedIngredientResponse(BaseModel):
     ingredient_id: int
     qty: float
