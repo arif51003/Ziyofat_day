@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import os
 
@@ -10,7 +9,7 @@ from app.routers import (
     user_router,
     cashier_router,
     kitchen_router
-    
+
 )
 
 # from app.middleware.dbmiddleware import DBSessionMiddleware
@@ -18,14 +17,8 @@ from app.admin.settings import admin
 
 app = FastAPI(title="ZIYOFAT-DAY")
 
-# Add CORS Middleware to allow requests from the frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # In production replace with actual frontend URL
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Frontend is served by this same app (see the static mounts and SPA
+# fallback route below), so requests are same-origin and CORS isn't needed.
 
 app.include_router(login_router)
 app.include_router(user_router)

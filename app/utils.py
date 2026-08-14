@@ -26,6 +26,7 @@ def generate_jwt_tokens(user_id: int, is_access_only: bool = False):
         key=settings.SECRET_KEY,
         claims={
             "sub": str(user_id),
+            "type": "access",
             "exp": datetime.now(timezone.utc)
             + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         },
@@ -39,6 +40,7 @@ def generate_jwt_tokens(user_id: int, is_access_only: bool = False):
         key=settings.SECRET_KEY,
         claims={
             "sub": str(user_id),
+            "type": "refresh",
             "exp": datetime.now(timezone.utc)
             + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         },
@@ -47,11 +49,15 @@ def generate_jwt_tokens(user_id: int, is_access_only: bool = False):
     return access_token, refresh_token
 
 
-def decode_jwt_token(token: str):
+def decode_jwt_token(token: str, expected_type: str | None = None):
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
-        return payload
     except JWTError as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
+
+    if expected_type is not None and payload.get("type") != expected_type:
+        raise HTTPException(status_code=401, detail="Invalid token type")
+
+    return payload

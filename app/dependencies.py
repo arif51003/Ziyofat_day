@@ -23,7 +23,7 @@ def get_current_user_jwt(
     if session.execute(stmt).scalar():
         raise HTTPException(status_code=401, detail="Token in blacklist")
 
-    decoded = decode_jwt_token(credentials.credentials)
+    decoded = decode_jwt_token(credentials.credentials, expected_type="access")
     user_id = decoded["sub"]
     exp = datetime.fromtimestamp(decoded["exp"], tz=timezone.utc)
 

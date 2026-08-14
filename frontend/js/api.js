@@ -1,6 +1,4 @@
-import { store, showToast } from './store.js';
-
-const API_BASE = 'http://127.0.0.1:8000'; // Target FastAPI backend
+import { store, showToast, API_BASE } from './store.js';
 
 export async function apiCall(endpoint, method = 'GET', body = null) {
     const headers = {
@@ -14,6 +12,7 @@ export async function apiCall(endpoint, method = 'GET', body = null) {
     const config = {
         method,
         headers,
+        credentials: 'include', // let the browser store/send the admin session cookie set by /auth/login/
     };
 
     if (body) {

@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Depends, Form
+from fastapi import APIRouter, HTTPException, Depends, Form, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 
+from app.config import settings
 from app.database import db_dep
 from app.dependencies import admin_user
 from app.schemas import RefreshTokenRequest
@@ -16,7 +17,10 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/login/")
 async def login(
-    db: db_dep, username: str | None = Form(None), password: str | None = Form(None)
+    response: Response,
+    db: db_dep,
+    username: str | None = Form(None),
+    password: str | None = Form(None),
 ):
     # email, password ask
     # user topilsa, yangi access va refresh tokenlar generatsiya qilamiz
@@ -30,6 +34,18 @@ async def login(
         raise HTTPException(status_code=403, detail="Foydalanuvchi faol emas")
 
     access_token, refresh_token = generate_jwt_tokens(user.id)
+
+    if user.is_admin:
+        # Also authenticate the Starlette-Admin session so an admin who logs
+        # in through the SPA can open /admin without logging in a second time.
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            secure=True,
+            samesite="lax",
+        )
 
     return {
         "access_token": access_token,
@@ -47,7 +63,7 @@ async def login(
 
 @router.post("/refresh/")
 async def refresh(db: db_dep, data: RefreshTokenRequest):
-    decoded_data = decode_jwt_token(data.refresh_token)
+    decoded_data = decode_jwt_token(data.refresh_token, expected_type="refresh")
 
     exp_time = datetime.fromtimestamp(decoded_data["exp"], tz=timezone.utc)
     if exp_time < datetime.now(timezone.utc):

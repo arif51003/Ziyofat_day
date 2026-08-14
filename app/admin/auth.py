@@ -70,7 +70,7 @@ class JSONAuthProvider(AuthProvider):
             return None
 
         try:
-            payload = decode_jwt_token(token)
+            payload = decode_jwt_token(token, expected_type="access")
         except (jwt.JWTError, HTTPException):
             return None
 

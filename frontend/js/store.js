@@ -1,3 +1,5 @@
+export const API_BASE = ''; // Frontend is served by the same FastAPI app, so requests are same-origin
+
 // Store for global state
 export const store = {
     token: localStorage.getItem('access_token') || null,
@@ -11,6 +13,12 @@ export const store = {
     },
 
     logout() {
+        // Admins also get a Starlette-Admin session cookie on login (see
+        // /auth/login/) so /admin doesn't ask for a second login. Clear it
+        // here too, otherwise it stays valid after the SPA "logs out".
+        if (this.user?.is_admin) {
+            fetch(`${API_BASE}/admin/logout`, { credentials: 'include' }).catch(() => {});
+        }
         this.token = null;
         this.user = null;
         localStorage.removeItem('access_token');
