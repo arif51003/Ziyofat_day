@@ -37,6 +37,7 @@ def get_revenue_report(
     stmt = (
         select(Order)
         .where(
+            Order.restaurant_id == admin.restaurant_id,
             Order.status == "closed",
             Order.closed_at >= range_start,
             Order.closed_at <= range_end,

@@ -3,6 +3,7 @@ from starlette_admin.contrib.sqla import Admin
 from app.database import engine
 from app.models import (
     User,
+    Restaurant,
     MenuCategory,
     MenuItem,
     DiningTable,
@@ -18,6 +19,7 @@ from app.models import (
 )
 from .views import (
     UserAdminView,
+    RestaurantView,
     MenuCategoryView,
     MenuItemView,
     TableViews,
@@ -40,6 +42,7 @@ admin = Admin(
     auth_provider=JSONAuthProvider(login_path="/login", logout_path="/logout"),
 )
 
+admin.add_view(RestaurantView(Restaurant, icon="fa fa-building"))
 admin.add_view(UserAdminView(User, icon="fa fa-users"))
 admin.add_view(MenuCategoryView(MenuCategory, icon="fa fa-list"))
 admin.add_view(MenuItemView(MenuItem, icon="fa fa-utensils"))

@@ -23,7 +23,7 @@ def get_unpaid_orders(user: cashier_user, db: db_dep):
 
     stmt = (
         select(Order)
-        .where(Order.status == "submitted")
+        .where(Order.restaurant_id == user.restaurant_id, Order.status == "submitted")
         .options(
             selectinload(Order.table),
             selectinload(Order.items),
@@ -62,7 +62,7 @@ def get_paid_orders(user: cashier_user, db: db_dep):
 
     stmt = (
         select(Order)
-        .where(Order.status == "closed")
+        .where(Order.restaurant_id == user.restaurant_id, Order.status == "closed")
         .options(
             selectinload(Order.table),
             selectinload(Order.items),
@@ -102,7 +102,7 @@ def get_order_summary(order_id: int, user: cashier_user, db: db_dep):
 
     stmt = (
         select(Order)
-        .where(Order.id == order_id)
+        .where(Order.id == order_id, Order.restaurant_id == user.restaurant_id)
         .options(
             selectinload(Order.table),
             selectinload(Order.items).selectinload(OrderItem.menu_item),
@@ -166,7 +166,7 @@ def create_payment(order_id: int, data: CreatePaymentRequest, user: cashier_user
 
     stmt = (
         select(Order)
-        .where(Order.id == order_id)
+        .where(Order.id == order_id, Order.restaurant_id == user.restaurant_id)
         .options(
             selectinload(Order.items),
             selectinload(Order.payments),
@@ -197,6 +197,7 @@ def create_payment(order_id: int, data: CreatePaymentRequest, user: cashier_user
         )
 
     payment = Payment(
+        restaurant_id=user.restaurant_id,
         order_id=order.id,
         cashier_id=user.id,
         method=data.method,
@@ -216,7 +217,7 @@ def close_order(order_id: int, user: cashier_user, db: db_dep):
 
     stmt = (
         select(Order)
-        .where(Order.id == order_id)
+        .where(Order.id == order_id, Order.restaurant_id == user.restaurant_id)
         .options(
             selectinload(Order.items),
             selectinload(Order.payments),

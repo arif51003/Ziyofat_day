@@ -16,7 +16,7 @@ export const store = {
         // Admins also get a Starlette-Admin session cookie on login (see
         // /auth/login/) so /admin doesn't ask for a second login. Clear it
         // here too, otherwise it stays valid after the SPA "logs out".
-        if (this.user?.is_admin) {
+        if (this.user?.is_admin || this.user?.is_platform_owner) {
             fetch(`${API_BASE}/admin/logout`, { credentials: 'include' }).catch(() => {});
         }
         this.token = null;

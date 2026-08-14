@@ -1,18 +1,42 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Depends, Form, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from app.config import settings
 from app.database import db_dep
 from app.dependencies import admin_user
 from app.schemas import RefreshTokenRequest
-from app.models import User, TokenBlacklist
-from app.utils import verify_password, generate_jwt_tokens, decode_jwt_token, hash_password
+from app.models import Restaurant, User, TokenBlacklist
+from app.utils import (
+    verify_password,
+    generate_jwt_tokens,
+    decode_jwt_token,
+    hash_password,
+    has_active_subscription,
+)
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+
+def _user_out(user: User) -> dict:
+    return {
+        "id": user.id,
+        "username": user.username,
+        "role": user.role,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "is_admin": user.is_admin,
+        "is_platform_owner": user.is_platform_owner,
+        "restaurant": (
+            {"id": user.restaurant.id, "name": user.restaurant.name, "code": user.restaurant.code}
+            if user.restaurant
+            else None
+        ),
+    }
 
 
 @router.post("/login/")
@@ -21,10 +45,20 @@ async def login(
     db: db_dep,
     username: str | None = Form(None),
     password: str | None = Form(None),
+    restaurant_code: str | None = Form(None),
 ):
-    # email, password ask
-    # user topilsa, yangi access va refresh tokenlar generatsiya qilamiz
-    stmt = select(User).where(User.username == username)
+    # restaurant_code bo'sh bo'lsa - platforma egasi (restaurant_id NULL) sifatida qidiramiz,
+    # bo'lsa - o'sha restoran ichidan username qidiramiz (username restoran ichida unique)
+    stmt = select(User).options(joinedload(User.restaurant))
+
+    if restaurant_code:
+        restaurant = db.scalar(select(Restaurant).where(Restaurant.code == restaurant_code))
+        if not restaurant:
+            raise HTTPException(status_code=404, detail="Restoran topilmadi")
+        stmt = stmt.where(User.username == username, User.restaurant_id == restaurant.id)
+    else:
+        stmt = stmt.where(User.username == username, User.restaurant_id.is_(None))
+
     user = db.execute(stmt).scalars().first()
     if not user or user.is_deleted:
         raise HTTPException(status_code=404, detail="User not found")
@@ -32,10 +66,12 @@ async def login(
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Foydalanuvchi faol emas")
+    if not has_active_subscription(user.restaurant):
+        raise HTTPException(status_code=403, detail="Restoran obunasi faol emas")
 
     access_token, refresh_token = generate_jwt_tokens(user.id)
 
-    if user.is_admin:
+    if user.is_admin or user.is_platform_owner:
         # Also authenticate the Starlette-Admin session so an admin who logs
         # in through the SPA can open /admin without logging in a second time.
         response.set_cookie(
@@ -50,14 +86,66 @@ async def login(
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "role": user.role,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "is_admin": user.is_admin
-        }
+        "user": _user_out(user),
+    }
+
+
+@router.post("/register-restaurant", status_code=201)
+async def register_restaurant(
+    db: db_dep,
+    restaurant_name: str = Form(...),
+    restaurant_code: str = Form(...),
+    phone: str | None = Form(None),
+    username: str = Form(...),
+    password: str = Form(...),
+    first_name: str | None = Form(None),
+    last_name: str | None = Form(None),
+):
+    """Ochiq (auth talab qilinmaydigan) ro'yxatdan o'tish: yangi restoran + uning
+    birinchi admin hisobini bir vaqtda yaratadi, trial holatida boshlaydi."""
+    restaurant_code = restaurant_code.strip().lower()
+
+    if not restaurant_code or not restaurant_code.replace("-", "").isalnum():
+        raise HTTPException(
+            status_code=400,
+            detail="Restoran kodi faqat harf, raqam va '-' belgisidan iborat bo'lishi kerak",
+        )
+
+    existing = db.scalar(select(Restaurant).where(Restaurant.code == restaurant_code))
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu restoran kodi band")
+
+    restaurant = Restaurant(
+        name=restaurant_name,
+        code=restaurant_code,
+        phone=phone,
+        subscription_status="trial",
+        trial_ends_at=datetime.now() + timedelta(days=14),
+        is_active=True,
+    )
+    db.add(restaurant)
+    db.flush()  # restaurant.id kerak
+
+    admin_user_obj = User(
+        restaurant_id=restaurant.id,
+        username=username,
+        password_hash=hash_password(password),
+        role="admin",
+        first_name=first_name,
+        last_name=last_name,
+        is_admin=True,
+    )
+    db.add(admin_user_obj)
+    db.commit()
+    db.refresh(admin_user_obj)
+    admin_user_obj.restaurant = restaurant
+
+    access_token, refresh_token = generate_jwt_tokens(admin_user_obj.id)
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "user": _user_out(admin_user_obj),
     }
 
 
@@ -72,6 +160,15 @@ async def refresh(db: db_dep, data: RefreshTokenRequest):
         )
 
     user_id = decoded_data["sub"]
+
+    user = db.scalar(
+        select(User).where(User.id == user_id).options(joinedload(User.restaurant))
+    )
+    if not user or user.is_deleted or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found yoki faol emas")
+    if not has_active_subscription(user.restaurant):
+        raise HTTPException(status_code=403, detail="Restoran obunasi faol emas")
+
     access_token = generate_jwt_tokens(user_id, is_access_only=True)
 
     return {
@@ -117,7 +214,9 @@ async def create_user(
             detail=f"Noto'g'ri role. Ruxsat etilgan: {', '.join(sorted(VALID_ROLES))}",
         )
 
-    stmt = select(User).where(User.username == username)
+    stmt = select(User).where(
+        User.username == username, User.restaurant_id == admin.restaurant_id
+    )
     existing_user = db.execute(stmt).scalars().first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already exists")
@@ -125,6 +224,7 @@ async def create_user(
     hashed_password = hash_password(password)
 
     new_user = User(
+        restaurant_id=admin.restaurant_id,
         username=username,
         password_hash=hashed_password,
         role=role,

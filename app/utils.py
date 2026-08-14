@@ -63,3 +63,24 @@ def decode_jwt_token(token: str, expected_type: str | None = None):
         raise HTTPException(status_code=401, detail="Invalid token type")
 
     return payload
+
+
+def has_active_subscription(restaurant) -> bool:
+    """Platform owners (restaurant is None) always pass. Otherwise the
+    restaurant must be active and its trial/subscription window not expired.
+    """
+    if restaurant is None:
+        return True
+
+    if not restaurant.is_active:
+        return False
+
+    now = datetime.now()
+
+    if restaurant.subscription_status == "trial":
+        return restaurant.trial_ends_at is None or restaurant.trial_ends_at > now
+
+    if restaurant.subscription_status == "active":
+        return restaurant.subscription_ends_at is None or restaurant.subscription_ends_at > now
+
+    return False

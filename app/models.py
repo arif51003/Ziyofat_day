@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     JSON,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -27,10 +28,39 @@ class BaseModel(Base):
     )
 
 
+class Restaurant(BaseModel):
+    __tablename__ = "restaurants"
+
+    name: Mapped[str] = mapped_column(String(100))
+    code: Mapped[str] = mapped_column(String(30), unique=True)  # login uchun restoran kodi
+    phone: Mapped[str] = mapped_column(String(20), nullable=True)
+
+    # trial | active | expired | suspended
+    subscription_status: Mapped[str] = mapped_column(String(20), default="trial")
+    trial_ends_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    subscription_ends_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    users: Mapped[list["User"]] = relationship("User", back_populates="restaurant")
+
+    def __repr__(self):
+        return self.name
+
+    def __admin_repr__(self, request: Request):
+        return self.name
+
+
 class User(BaseModel):
     __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint("restaurant_id", "username", name="uq_user_restaurant_username"),
+    )
 
-    username: Mapped[str] = mapped_column(String(50), unique=True)
+    # NULL faqat platforma egasi (is_platform_owner) uchun - u hech qaysi restoranga tegishli emas
+    restaurant_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("restaurants.id"), nullable=True
+    )
+    username: Mapped[str] = mapped_column(String(50))
     password_hash: Mapped[str] = mapped_column(String(255))
     first_name: Mapped[str] = mapped_column(String(50), nullable=True)
     last_name: Mapped[str] = mapped_column(String(50), nullable=True)
@@ -38,30 +68,36 @@ class User(BaseModel):
     avatar_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("media.id", ondelete="SET NULL"), nullable=True
     )
-    
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_platform_owner: Mapped[bool] = mapped_column(Boolean, default=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    restaurant: Mapped["Restaurant"] = relationship("Restaurant", back_populates="users")
     orders: Mapped[list["Order"]] = relationship("Order", back_populates="waiter")
     avatar: Mapped["Media"] = relationship("Media", foreign_keys=[avatar_id])
     stock_movements: Mapped[list["StockMovements"]] = relationship(
     "StockMovements",
     back_populates="user"
-    
+
 
 )
     def __admin_repr__(self,request:Request):
         return self.username
-    
+
     def __repr__(self):
         return self.username
-    
+
 
 class DiningTable(BaseModel):
     __tablename__ = "dining_table"
+    __table_args__ = (
+        UniqueConstraint("restaurant_id", "table_no", name="uq_table_restaurant_no"),
+    )
 
-    table_no: Mapped[str] = mapped_column(String(3), unique=True)
+    restaurant_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("restaurants.id"))
+    table_no: Mapped[str] = mapped_column(String(3))
     capacity: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(10), nullable=True, default="free")
 
@@ -77,6 +113,7 @@ class DiningTable(BaseModel):
 class MenuCategory(BaseModel):
     __tablename__ = "menu_category"
 
+    restaurant_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("restaurants.id"))
     name: Mapped[str] = mapped_column(String(50))
     sort_order: Mapped[int] = mapped_column(Integer)
 
@@ -89,6 +126,7 @@ class MenuCategory(BaseModel):
 class MenuItem(BaseModel):
     __tablename__ = "menu_item"
 
+    restaurant_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("restaurants.id"))
     category_id: Mapped[int] = mapped_column(
         ForeignKey("menu_category.id"), nullable=True
     )
@@ -116,6 +154,7 @@ class MenuItem(BaseModel):
 class MenuItemVariant(BaseModel):
     __tablename__ = "menu_item_variant"
 
+    restaurant_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("restaurants.id"))
     menu_item_id: Mapped[int] = mapped_column(ForeignKey("menu_item.id"))
     name: Mapped[str] = mapped_column(String(50))
     price_delta: Mapped[int] = mapped_column(BigInteger)
@@ -132,6 +171,7 @@ class MenuItemVariant(BaseModel):
 class Order(BaseModel):
     __tablename__ = "orders"
 
+    restaurant_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("restaurants.id"))
     table_id: Mapped[int] = mapped_column(ForeignKey("dining_table.id"))
     waiter_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     status: Mapped[str] = mapped_column(String(20))
@@ -154,6 +194,7 @@ class Order(BaseModel):
 class OrderItem(BaseModel):
     __tablename__ = "order_item"
 
+    restaurant_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("restaurants.id"))
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"))
     menu_item_id: Mapped[int] = mapped_column(ForeignKey("menu_item.id"))
     variant_id: Mapped[int] = mapped_column(
@@ -177,6 +218,7 @@ class OrderItem(BaseModel):
 class Payment(BaseModel):
     __tablename__ = "payment"
 
+    restaurant_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("restaurants.id"))
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"))
     cashier_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=True)
     method: Mapped[str] = mapped_column(String(10))
@@ -190,6 +232,7 @@ class Payment(BaseModel):
 class AuditLog(BaseModel):
     __tablename__ = "audit_log"
 
+    restaurant_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("restaurants.id"))
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     entity: Mapped[str] = mapped_column(String(50))
     entity_id: Mapped[int] = mapped_column(BigInteger)
@@ -212,7 +255,8 @@ class TokenBlacklist(Base):
 
 class Ingredient(BaseModel):
     __tablename__="ingredients"
-    
+
+    restaurant_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("restaurants.id"))
     name:Mapped[str]= mapped_column(String(50))
     uom:Mapped[str]=mapped_column(String(10))
     min_stock:Mapped[int]= mapped_column(BigInteger)
@@ -238,7 +282,8 @@ class Ingredient(BaseModel):
 
 class MenuIngredient(BaseModel):
     __tablename__="menu_ingredient"
-    
+
+    restaurant_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("restaurants.id"))
     menu_item_id:Mapped[int] = mapped_column(ForeignKey("menu_item.id"))
     ingredient_id:Mapped[int] = mapped_column(ForeignKey("ingredients.id"))
     qty_required:Mapped[float] = mapped_column(Float)
@@ -255,7 +300,8 @@ class MenuIngredient(BaseModel):
 
 class IngredientStock(BaseModel):
     __tablename__="ingredient_stock"
-    
+
+    restaurant_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("restaurants.id"))
     ingredient_id:Mapped[int] = mapped_column(ForeignKey("ingredients.id"),unique=True)
     qty_on_hand:Mapped[float] = mapped_column(Float)
     
@@ -269,7 +315,8 @@ class IngredientStock(BaseModel):
     
 class StockMovements(BaseModel):
     __tablename__="stock_movements"
-    
+
+    restaurant_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("restaurants.id"))
     ingredient_id:Mapped[int] = mapped_column(ForeignKey("ingredients.id"))
     status:Mapped[str] = mapped_column(String(5))
     qty:Mapped[float] = mapped_column(Float)

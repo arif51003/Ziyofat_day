@@ -22,6 +22,7 @@ def get_kitchen_queue(user: kitchen_user, db: db_dep):
         .join(Order, Order.id == OrderItem.order_id)
         .join(MenuItem, MenuItem.id == OrderItem.menu_item_id)
         .where(
+            Order.restaurant_id == user.restaurant_id,
             Order.status == "submitted",
             OrderItem.status.in_(["sent", "preparing", "ready"]),
             MenuItem.station.notin_(["Ichimliklar", "Shirinliklar"]),
@@ -61,7 +62,7 @@ def get_kitchen_order(order_id: int, user: kitchen_user, db: db_dep):
 
     stmt = (
         select(Order)
-        .where(Order.id == order_id)
+        .where(Order.id == order_id, Order.restaurant_id == user.restaurant_id)
         .options(
             selectinload(Order.table),
             selectinload(Order.items).selectinload(OrderItem.menu_item),
@@ -117,7 +118,7 @@ def start_preparing(item_id: int, user: kitchen_user, db: db_dep):
 
     stmt = (
         select(OrderItem)
-        .where(OrderItem.id == item_id)
+        .where(OrderItem.id == item_id, OrderItem.restaurant_id == user.restaurant_id)
         .options(selectinload(OrderItem.order))
     )
     item = db.scalar(stmt)
@@ -154,7 +155,7 @@ def mark_item_ready(item_id: int, user: kitchen_user, db: db_dep):
 
     stmt = (
         select(OrderItem)
-        .where(OrderItem.id == item_id)
+        .where(OrderItem.id == item_id, OrderItem.restaurant_id == user.restaurant_id)
         .options(
             selectinload(OrderItem.order).selectinload(Order.items)
         )

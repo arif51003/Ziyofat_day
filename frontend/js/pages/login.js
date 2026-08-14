@@ -15,10 +15,15 @@ export default function renderLogin() {
 
             <form id="login-form">
                 <div class="input-group" style="text-align: left;">
+                    <label class="input-label">Restoran kodi</label>
+                    <input type="text" id="restaurant_code" name="restaurant_code" class="input-field" placeholder="masalan: ziyofat" autocapitalize="off">
+                </div>
+
+                <div class="input-group" style="text-align: left;">
                     <label class="input-label">Login (Username)</label>
                     <input type="text" id="username" name="username" class="input-field" placeholder="admin" required>
                 </div>
-                
+
                 <div class="input-group" style="text-align: left; margin-bottom: 32px;">
                     <label class="input-label">Parol (Password)</label>
                     <input type="password" id="password" name="password" class="input-field" placeholder="••••••••" required>
@@ -28,6 +33,10 @@ export default function renderLogin() {
                     Tizimga kirish <i class="ri-arrow-right-line"></i>
                 </button>
             </form>
+
+            <p style="margin-top: 20px; text-align: center;">
+                Restoraningiz yo'qmi? <a href="#" id="go-register-link" style="color: var(--c-primary);">Ro'yxatdan o'ting</a>
+            </p>
         </div>
     `;
 
@@ -37,18 +46,20 @@ export default function renderLogin() {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        const restaurantCodeInput = document.getElementById('restaurant_code');
         const usernameInput = document.getElementById('username');
         const passwordInput = document.getElementById('password');
+        const restaurant_code = restaurantCodeInput?.value.trim() || '';
         const username = usernameInput?.value || '';
         const password = passwordInput?.value || '';
-        
+
         console.log('Login attempt:', { username, password_length: password.length });
-        
+
         if (!username || !password) {
             showToast('Username va password ni to\'ldiring!', 'error');
             return;
         }
-        
+
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="ri-loader-4-line" style="animation: spin 1s linear infinite;"></i> Tekshirilmoqda...';
 
@@ -57,13 +68,14 @@ export default function renderLogin() {
             const body = new URLSearchParams();
             body.append('username', username);
             body.append('password', password);
-            
+            if (restaurant_code) body.append('restaurant_code', restaurant_code);
+
             console.log('Sending to /auth/login/:', body.toString());
 
             const tokenData = await apiCall('/auth/login/', 'POST', body);
-            
+
             console.log('✅ Login response:', tokenData);
-            
+
             if(tokenData.access_token) {
                 // Use user data from backend if available
                 let userData = tokenData.user ? {
@@ -72,10 +84,12 @@ export default function renderLogin() {
                     role: tokenData.user.role,
                     first_name: tokenData.user.first_name,
                     last_name: tokenData.user.last_name,
-                    is_admin: tokenData.user.is_admin
-                } : { 
-                    username: username, 
-                    role: "unknown" 
+                    is_admin: tokenData.user.is_admin,
+                    is_platform_owner: tokenData.user.is_platform_owner,
+                    restaurant: tokenData.user.restaurant
+                } : {
+                    username: username,
+                    role: "unknown"
                 };
                 
                 store.login(tokenData.access_token, userData);
@@ -92,6 +106,11 @@ export default function renderLogin() {
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'Tizimga kirish <i class="ri-arrow-right-line"></i>';
         }
+    });
+
+    container.querySelector('#go-register-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('navTo', { detail: '/register' }));
     });
 
     return container;

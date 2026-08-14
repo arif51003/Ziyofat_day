@@ -43,6 +43,7 @@ def get_menu(user: waiter_user, db: db_dep):
 
     stmt = (
         select(MenuCategory)
+        .where(MenuCategory.restaurant_id == user.restaurant_id)
         .options(
             selectinload(MenuCategory.items).selectinload(MenuItem.variants),
             selectinload(MenuCategory.items).selectinload(MenuItem.img),
@@ -104,7 +105,7 @@ def get_free_tables(user: waiter_user, db: db_dep):
 
     stmt = (
         select(DiningTable)
-        .where(DiningTable.status == "free")
+        .where(DiningTable.restaurant_id == user.restaurant_id, DiningTable.status == "free")
         .order_by(DiningTable.table_no)
     )
     tables = db.scalars(stmt).all()
@@ -115,7 +116,12 @@ def get_free_tables(user: waiter_user, db: db_dep):
 @router.post("/orders/open", response_model=OpenOrderResponse, status_code=201)
 def open_order(data: OpenOrderRequest, user: waiter_user, db: db_dep):
 
-    table = db.get(DiningTable, data.table_id)
+    table = db.scalar(
+        select(DiningTable).where(
+            DiningTable.id == data.table_id,
+            DiningTable.restaurant_id == user.restaurant_id,
+        )
+    )
     if not table:
         raise HTTPException(status_code=404, detail="Stol topilmadi")
 
@@ -135,6 +141,7 @@ def open_order(data: OpenOrderRequest, user: waiter_user, db: db_dep):
         )
 
     order = Order(
+        restaurant_id=user.restaurant_id,
         table_id=table.id,
         waiter_id=user.id,
         status="open",
@@ -285,7 +292,12 @@ def add_order_item(order_id: int, data: AddOrderItemRequest, user: waiter_user, 
     if order.status not in ["open", "submitted"]:
         raise HTTPException(status_code=400, detail="Faqat open yoki submitted orderga item qo'shiladi")
 
-    menu_item = db.get(MenuItem, data.menu_item_id)
+    menu_item = db.scalar(
+        select(MenuItem).where(
+            MenuItem.id == data.menu_item_id,
+            MenuItem.restaurant_id == user.restaurant_id,
+        )
+    )
     if not menu_item or not menu_item.is_active:
         raise HTTPException(status_code=404, detail="Menu item topilmadi")
 
@@ -307,6 +319,7 @@ def add_order_item(order_id: int, data: AddOrderItemRequest, user: waiter_user, 
         variant_name = variant.name
 
     item = OrderItem(
+        restaurant_id=user.restaurant_id,
         order_id=order.id,
         menu_item_id=menu_item.id,
         variant_id=variant_id,
@@ -519,6 +532,7 @@ def submit_order(order_id: int, user: waiter_user, db: db_dep):
         stock.qty_on_hand -= needed_qty
 
         movement = StockMovements(
+            restaurant_id=user.restaurant_id,
             ingredient_id=ingredient_id,
             status="OUT",
             qty=needed_qty,

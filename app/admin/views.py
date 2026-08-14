@@ -16,7 +16,45 @@ def looks_hashed(p: str):
     return p.startswith("$argon2")
 
 
-class UserAdminView(ModelView):
+class TenantScopedView(ModelView):
+    """Base for every ModelView whose model carries a restaurant_id.
+
+    Restricts list/count/detail (and therefore edit/delete, which look the
+    row up via get_details_query) to the logged-in admin's own restaurant,
+    and auto-assigns restaurant_id on create. Platform-owner accounts
+    (is_platform_owner=True, not tied to a restaurant) bypass the filter
+    and see everything. restaurant_id itself is never a form field, so a
+    restaurant admin can't reassign a row to another tenant.
+    """
+
+    exclude_fields_from_create = ["restaurant_id"]
+    exclude_fields_from_edit = ["restaurant_id"]
+
+    def _scope(self, stmt, request: Request):
+        user = getattr(request.state, "user", None)
+        if user is None:
+            # Shouldn't happen (auth middleware runs first) - fail closed.
+            return stmt.where(self.model.restaurant_id == -1)
+        if user.is_platform_owner:
+            return stmt
+        return stmt.where(self.model.restaurant_id == user.restaurant_id)
+
+    def get_list_query(self, request: Request):
+        return self._scope(super().get_list_query(request), request)
+
+    def get_count_query(self, request: Request):
+        return self._scope(super().get_count_query(request), request)
+
+    def get_details_query(self, request: Request):
+        return self._scope(super().get_details_query(request), request)
+
+    async def before_create(self, request: Request, data: Dict[str, Any], obj: Any) -> None:
+        user = getattr(request.state, "user", None)
+        if user is not None and not user.is_platform_owner:
+            obj.restaurant_id = user.restaurant_id
+
+
+class UserAdminView(TenantScopedView):
     fields = [
         "id",
         "username",
@@ -78,6 +116,7 @@ class UserAdminView(ModelView):
             obj.avatar_id = media.id
 
         data.pop("img_file", None)
+        await super().before_create(request, data, obj)
 
     async def before_edit(
         self, request: Request, data: Dict[str, Any], obj: Any
@@ -125,7 +164,7 @@ def extract_upload(v) -> UploadFile | None:
     return None
 
 
-class MenuCategoryView(ModelView):
+class MenuCategoryView(TenantScopedView):
     fields = ["id", "name", "sort_order", "created_at", "updated_at"]
     exclude_fields_from_create = ["id", "created_at", "updated_at"]
     exclude_fields_from_edit = ["id", "created_at", "updated_at"]
@@ -137,7 +176,7 @@ def _safe_ext(filename: str) -> str:
     return ext.lower()[:10] if ext else ""
 
 
-class MenuItemView(ModelView):
+class MenuItemView(TenantScopedView):
     fields = [
         "id",
         "name",
@@ -195,6 +234,7 @@ class MenuItemView(ModelView):
             obj.img_id = media.id
 
         data.pop("img_file", None)
+        await super().before_create(request, data, obj)
 
     async def before_edit(
         self, request: Request, data: Dict[str, Any], obj: Any
@@ -230,7 +270,7 @@ class MenuItemView(ModelView):
         data.pop("img_file", None)
 
 
-class TableViews(ModelView):
+class TableViews(TenantScopedView):
     fields = [
         "id",
         "table_no",
@@ -251,7 +291,7 @@ class TableViews(ModelView):
     exclude_fields_from_list = ["updated_at", "created_at", "id"]
 
 
-class PaymentView(ModelView):
+class PaymentView(TenantScopedView):
     fields = [
         "id",
         "order",
@@ -268,29 +308,60 @@ class PaymentView(ModelView):
     ]
 
 
-class OrdersView(ModelView):
+class OrdersView(TenantScopedView):
     pass
 
 
-class OrderItemView(ModelView):
+class OrderItemView(TenantScopedView):
     pass
 
 
-class MenuVariantView(ModelView):
+class MenuVariantView(TenantScopedView):
     pass
 
 
-class AuditLogView(ModelView):
+class AuditLogView(TenantScopedView):
     pass
 
-class IngredientsView(ModelView):
+class IngredientsView(TenantScopedView):
     pass
 
-class MenuIngredientsView(ModelView):
+class MenuIngredientsView(TenantScopedView):
     pass
 
-class IngredientStockView(ModelView):
+class IngredientStockView(TenantScopedView):
     pass
 
-class StockMovementsView(ModelView):
+class StockMovementsView(TenantScopedView):
     pass
+
+
+class RestaurantView(ModelView):
+    """Not tenant-scoped - only the platform owner can see or manage this."""
+
+    fields = [
+        "id",
+        "name",
+        "code",
+        "phone",
+        EnumField(
+            "subscription_status",
+            choices=[
+                ("trial", "Trial"),
+                ("active", "Active"),
+                ("expired", "Expired"),
+                ("suspended", "Suspended"),
+            ],
+        ),
+        "trial_ends_at",
+        "subscription_ends_at",
+        "is_active",
+        "created_at",
+        "updated_at",
+    ]
+    exclude_fields_from_create = ["id", "created_at", "updated_at"]
+    exclude_fields_from_edit = ["id", "created_at", "updated_at"]
+
+    def is_accessible(self, request: Request) -> bool:
+        user = getattr(request.state, "user", None)
+        return bool(user and user.is_platform_owner)

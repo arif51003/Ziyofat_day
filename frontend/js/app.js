@@ -1,19 +1,21 @@
-import { store } from './store.js';
+import { store, API_BASE } from './store.js';
 import { apiCall } from './api.js';
 
 // ---- Router ----
 const routes = {
     '/login': () => import('./pages/login.js').then(m => m.default()),
+    '/register': () => import('./pages/register.js').then(m => m.default()),
     '/dashboard': () => renderDashboard(),
 };
 
 async function navigateTo(path) {
     console.log(`📍 Navigating to: ${path}`);
     
-    if (path !== '/login' && !store.isAuthenticated()) {
+    const publicPaths = ['/login', '/register'];
+    if (!publicPaths.includes(path) && !store.isAuthenticated()) {
         console.log('🚫 Not authenticated, redirecting to /login');
         path = '/login';
-    } else if (path === '/login' && store.isAuthenticated()) {
+    } else if (publicPaths.includes(path) && store.isAuthenticated()) {
         console.log('✅ Already authenticated, redirecting to /dashboard');
         path = '/dashboard';
     }
@@ -74,6 +76,24 @@ async function renderDashboard() {
     
     console.log(`📊 Rendering dashboard for role: ${userRole}`);
     
+    if (store.user?.is_platform_owner) {
+        container.innerHTML = `
+            <div style="padding: 40px; text-align: center;">
+                <button id="logout-btn-top" style="float: right; padding: 8px 16px; background: var(--c-danger-alpha); color: var(--c-danger); border: none; border-radius: 4px; cursor: pointer;">
+                    <i class="ri-logout-box-r-line"></i> Chiqish
+                </button>
+                <h2>Platforma boshqaruvi</h2>
+                <p style="color: var(--text-muted); margin-top: 12px;">Restoranlar va obunalarni boshqarish uchun admin panelga o'ting.</p>
+                <p style="margin-top: 20px;"><a href="${API_BASE}/admin/" style="color: var(--c-primary);">Admin Panelga o'ting</a></p>
+            </div>
+        `;
+        container.querySelector('#logout-btn-top').addEventListener('click', () => {
+            store.logout();
+            window.dispatchEvent(new CustomEvent('navTo', { detail: '/login' }));
+        });
+        return container;
+    }
+
     try {
         switch(userRole) {
             case 'waiter':
