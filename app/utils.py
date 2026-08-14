@@ -20,7 +20,9 @@ def verify_password(plain_password: str, hashed_password: str):
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def generate_jwt_tokens(user_id: int, is_access_only: bool = False):
+def generate_jwt_tokens(
+    user_id: int, is_access_only: bool = False, access_expires_delta: timedelta | None = None
+):
     access_token = jwt.encode(
         algorithm=settings.ALGORITHM,
         key=settings.SECRET_KEY,
@@ -28,7 +30,7 @@ def generate_jwt_tokens(user_id: int, is_access_only: bool = False):
             "sub": str(user_id),
             "type": "access",
             "exp": datetime.now(timezone.utc)
-            + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+            + (access_expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)),
         },
     )
 

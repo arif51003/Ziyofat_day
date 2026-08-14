@@ -1,7 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-import os
 
 from app.routers import (
     login_router,
@@ -41,27 +42,34 @@ try:
 except Exception as e:
     print(f"Warning: Could not mount frontend static files: {e}")
 
+FRONTEND_DIR = Path("frontend").resolve()
+
 # Serve index.html for all non-API routes (SPA support)
 # This must be last so API routes are matched first
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
     """Serve index.html for SPA routing"""
     # Skip API routes
-    api_prefixes = ["login", "waiter", "kitchen", "cashier", "user", "admin", "static"]
+    api_prefixes = ["auth", "waiter", "kitchen", "cashier", "user", "admin", "static"]
     if any(full_path.startswith(p) for p in api_prefixes):
         return {"detail": "Not found"}
-    
-    frontend_path = f"frontend/{full_path}"
-    
-    # Try to serve actual file if it exists
-    if full_path and os.path.exists(frontend_path) and os.path.isfile(frontend_path):
+
+    # Resolve against FRONTEND_DIR and confirm the result is still inside it,
+    # so "../.env" or similar can't escape the frontend directory.
+    requested_path = (FRONTEND_DIR / full_path).resolve() if full_path else None
+
+    if (
+        requested_path is not None
+        and requested_path.is_relative_to(FRONTEND_DIR)
+        and requested_path.is_file()
+    ):
         if full_path.endswith('.css'):
-            return FileResponse(frontend_path, media_type="text/css")
+            return FileResponse(requested_path, media_type="text/css")
         elif full_path.endswith('.js'):
-            return FileResponse(frontend_path, media_type="application/javascript")
+            return FileResponse(requested_path, media_type="application/javascript")
         elif full_path.endswith('.html'):
-            return FileResponse(frontend_path, media_type="text/html")
-        return FileResponse(frontend_path)
-    
+            return FileResponse(requested_path, media_type="text/html")
+        return FileResponse(requested_path)
+
     # Default to index.html for SPA client-side routing
-    return FileResponse("frontend/index.html", media_type="text/html")
+    return FileResponse(FRONTEND_DIR / "index.html", media_type="text/html")

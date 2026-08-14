@@ -359,6 +359,9 @@ def update_order_item(
     if item.order_id != order.id:
         raise HTTPException(status_code=400, detail="Item bu orderga tegishli emas")
 
+    if item.status != "new":
+        raise HTTPException(status_code=400, detail="Oshxonaga yuborilgan itemni o'zgartirib bo'lmaydi")
+
     payload = data.model_dump(exclude_unset=True)
 
     if "qty" in payload and payload["qty"] is not None:
@@ -398,6 +401,9 @@ def delete_order_item(order_id: int, item_id: int, user: waiter_user, db: db_dep
 
     if item.order_id != order.id:
         raise HTTPException(status_code=400, detail="Item bu orderga tegishli emas")
+
+    if item.status != "new":
+        raise HTTPException(status_code=400, detail="Oshxonaga yuborilgan itemni o'chirib bo'lmaydi")
 
     db.delete(item)
     db.commit()

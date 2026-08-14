@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, Request, Response
 from jose import jwt
@@ -42,13 +42,18 @@ class JSONAuthProvider(AuthProvider):
         finally:
             db.close()
 
-        access_token, refresh_token = generate_jwt_tokens(user.id)
-
-        token = refresh_token if remember_me else access_token
+        # The admin cookie always carries an access-type token (is_authenticated
+        # only accepts type="access"); remember_me just extends its lifetime to
+        # match the refresh-token window instead of swapping in a refresh token.
         expire_delta = (
             settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
             if remember_me
             else settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
+        token = generate_jwt_tokens(
+            user.id,
+            is_access_only=True,
+            access_expires_delta=timedelta(seconds=expire_delta) if remember_me else None,
         )
 
         response.set_cookie(

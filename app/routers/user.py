@@ -1,6 +1,6 @@
 import os
 import uuid
-from fastapi import APIRouter, UploadFile, Form, File
+from fastapi import APIRouter, HTTPException, UploadFile, Form, File
 
 from app.database import db_dep
 from app.models import Media
@@ -8,6 +8,9 @@ from app.schemas import UserProfileResponse
 from app.dependencies import current_user
 
 router = APIRouter(prefix="/user", tags=["User"])
+
+ALLOWED_AVATAR_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+MAX_AVATAR_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
 def _safe_ext(filename: str) -> str:
@@ -48,12 +51,20 @@ async def update_me(
         current_user.last_name = last_name
 
     if avatar:
+        ext = _safe_ext(avatar.filename)
+        if ext not in ALLOWED_AVATAR_EXTENSIONS:
+            raise HTTPException(status_code=400, detail="Ruxsat etilmagan fayl turi")
+
+        content = await avatar.read()
+        if len(content) > MAX_AVATAR_SIZE:
+            raise HTTPException(status_code=400, detail="Fayl hajmi 5MB dan katta")
+
         os.makedirs(UPLOAD_DIR, exist_ok=True)
-        filename = f"{uuid.uuid4().hex}{_safe_ext(avatar.filename)}"
+        filename = f"{uuid.uuid4().hex}{ext}"
         path = os.path.join(UPLOAD_DIR, filename)
 
         with open(path, "wb") as f:
-            f.write(await avatar.read())
+            f.write(content)
 
         media = Media(url=f"/static/{filename}")
         session.add(media)
