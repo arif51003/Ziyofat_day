@@ -9,8 +9,8 @@ from app.routers import (
     waiter_router,
     user_router,
     cashier_router,
-    kitchen_router
-
+    kitchen_router,
+    reports_router,
 )
 
 # from app.middleware.dbmiddleware import DBSessionMiddleware
@@ -26,6 +26,7 @@ app.include_router(user_router)
 app.include_router(cashier_router)
 app.include_router(waiter_router)
 app.include_router(kitchen_router)
+app.include_router(reports_router)
 
 
 
@@ -50,7 +51,7 @@ FRONTEND_DIR = Path("frontend").resolve()
 async def serve_frontend(full_path: str):
     """Serve index.html for SPA routing"""
     # Skip API routes
-    api_prefixes = ["auth", "waiter", "kitchen", "cashier", "user", "admin", "static"]
+    api_prefixes = ["auth", "waiter", "kitchen", "cashier", "user", "admin", "static", "reports"]
     if any(full_path.startswith(p) for p in api_prefixes):
         return {"detail": "Not found"}
 

@@ -1,4 +1,4 @@
-import { store, API_BASE } from './store.js';
+import { store } from './store.js';
 import { apiCall } from './api.js';
 
 // ---- Router ----
@@ -104,22 +104,12 @@ async function renderDashboard() {
                 break;
                 
             case 'admin':
-                // Admin: Show dashboard with navigation
+                // Admin: Show revenue/profit dashboard
                 console.log('📥 Loading admin dashboard...');
-                container.innerHTML = `
-                    <div style="padding: 40px; text-align: center;">
-                        <button id="logout-btn-top" style="float: right; padding: 8px 16px; background: var(--c-danger-alpha); color: var(--c-danger); border: none; border-radius: 4px; cursor: pointer;">
-                            <i class="ri-logout-box-r-line"></i> Chiqish
-                        </button>
-                        <h2>Admin Paneli</h2>
-                        <p style="color: var(--text-muted); margin-top: 12px;">Admin paneli backend Starlette-Admin orqali ishlaydi.</p>
-                        <p style="margin-top: 20px;"><a href="${API_BASE}/admin/" style="color: var(--c-primary);">Admin Page'ga o'ting</a></p>
-                    </div>
-                `;
-                container.querySelector('#logout-btn-top').addEventListener('click', () => {
-                    store.logout();
-                    window.dispatchEvent(new CustomEvent('navTo', { detail: '/login' }));
-                });
+                const adminRenderer = await import('./pages/admin.js').then(m => m.default);
+                const adminContent = await adminRenderer();
+                container.appendChild(adminContent);
+                console.log('✅ Admin dashboard loaded');
                 break;
                 
             default:

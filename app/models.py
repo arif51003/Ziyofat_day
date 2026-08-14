@@ -216,6 +216,7 @@ class Ingredient(BaseModel):
     name:Mapped[str]= mapped_column(String(50))
     uom:Mapped[str]=mapped_column(String(10))
     min_stock:Mapped[int]= mapped_column(BigInteger)
+    cost_price:Mapped[int] = mapped_column(BigInteger, default=0)  # 1 uom birligining tan narxi
     is_active:Mapped[bool] = mapped_column(Boolean,default=True)
     
     menu_ingredients: Mapped[list["MenuIngredient"]] = relationship(
